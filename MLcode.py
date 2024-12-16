@@ -100,24 +100,26 @@ def main():
             # User input for prediction
             st.subheader("Enter values for prediction")
 
-            # Define the required features that the model was trained on
-            input_features = ['Temperature', 'Rainfall', 'Soil Quality', 'Humidity']  # Update with your actual features
+            # Define all features used in the model (e.g., weather, soil, etc.)
+            all_features = ['Temperature', 'Rainfall', 'Soil Quality', 'Humidity', 'Region', 'Year']  # Example
+
+            # Create a dictionary for user inputs
             inputs = {}
 
-            # Collect user inputs
-            for feature in input_features:
-                inputs[feature] = st.number_input(f"{feature}", value=25.0)  # Default value is set here
+            for feature in all_features:
+                inputs[feature] = st.number_input(f"Enter {feature} value", value=0.0)  # Default value
 
-            # Prepare the input data
+            # Prepare the input data for prediction
             input_data = np.array([list(inputs.values())])
 
-            # Ensure the input data is scaled with the same MinMaxScaler used during training
+            # Make sure the input data has the same features as during training
             input_data_scaled = scaler.transform(input_data)
 
-            # Make prediction if the button is clicked
+            # Ensure input data is in the correct shape (similar to training sequence)
+            input_data_sequence = np.expand_dims(input_data_scaled, axis=1)  # Expanding to match the sequence input
+
+            # Predict crop yield when the button is clicked
             if st.button("Predict Crop Yield"):
-                # Ensure the input data is in the correct shape for the model
-                input_data_sequence = np.expand_dims(input_data_scaled, axis=1)  # Expanding to match the sequence input
                 prediction = model.predict(input_data_sequence)
                 st.write(f"Predicted Crop Yield: {prediction[0][0]:.2f}")
 
@@ -126,3 +128,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
