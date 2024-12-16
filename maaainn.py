@@ -9,7 +9,7 @@ try:
     from sklearn.model_selection import train_test_split
     from sklearn.metrics import mean_squared_error, r2_score
     from tensorflow.keras.models import Sequential
-    from tensorflow.keras.layers import Conv1D, MaxPooling1D, Flatten, LSTM, Dropout, Dense
+    from tensorflow.keras.layers import Conv1D, MaxPooling1D, LSTM, Dropout, Dense
     from tensorflow.keras.callbacks import EarlyStopping
 except ImportError as e:
     st.error(f"A required library is missing: {e}. Please install it using 'pip install scikit-learn tensorflow pandas numpy'.")
@@ -68,8 +68,7 @@ def main():
             model = Sequential()
             model.add(Conv1D(filters=64, kernel_size=2, activation='relu', input_shape=(sequence_length, sequences.shape[2])))
             model.add(MaxPooling1D(pool_size=1))
-            model.add(Flatten())
-            model.add(LSTM(50, return_sequences=False))
+            model.add(LSTM(50, return_sequences=False))  # Directly using LSTM without Flatten
             model.add(Dropout(0.2))
             model.add(Dense(1, activation='linear'))
             model.compile(optimizer='adam', loss='mse', metrics=['mae'])
@@ -84,7 +83,8 @@ def main():
 
                     # Evaluation
                     predictions = model.predict(X_val)
-                    rmse = mean_squared_error(y_val, predictions, squared=False)
+                    mse = mean_squared_error(y_val, predictions)
+                    rmse = np.sqrt(mse)  # Manually calculate RMSE
                     r2 = r2_score(y_val, predictions)
 
                     st.success("Model Training Complete!")
