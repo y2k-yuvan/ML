@@ -45,15 +45,23 @@ def main():
             combined_data = pd.merge(soil_data, weather_data, on=['region', 'year'])
             combined_data = pd.merge(combined_data, yield_data, on=['region', 'year'])
 
-            # Select only the columns that are required (8 features)
-            feature_columns = ['temperature', 'rainfall', 'soil_quality', 'humidity', 'region', 'year', 'crop_type', 'fertilizer_usage']
+            # Define feature columns (update these based on your CSV column names)
+            feature_columns = ['temperature', 'humidity', 'ph_level', 'moisture_content', 'organic_matter', 
+                               'fertility_level', 'salinity', 'crop_type']
+            
+            # Ensure the feature columns exist in the dataset
+            missing_columns = [col for col in feature_columns if col not in combined_data.columns]
+            if missing_columns:
+                st.error(f"Missing columns in the dataset: {missing_columns}")
+                st.stop()
+
             combined_data = combined_data[feature_columns]
 
             # Impute missing values
             imputer = KNNImputer(n_neighbors=5)
             clean_data = imputer.fit_transform(combined_data)
 
-            # Initialize MinMaxScaler and fit it only on the 8 features
+            # Initialize MinMaxScaler and fit it only on the features
             scaler = MinMaxScaler()
             normalized_data = scaler.fit_transform(clean_data)
 
@@ -106,17 +114,20 @@ def main():
             # User input for prediction (request exactly 8 inputs)
             st.subheader("Enter values for prediction")
 
-            # List of 8 features expected by the model
+            # List of features expected by the model
             all_features = [
-                'Temperature', 'Rainfall', 'Soil Quality', 'Humidity', 
-                'Region', 'Year', 'Crop Type', 'Fertilizer Usage'
+                'Temperature', 'Humidity', 'pH Level', 'Moisture Content', 'Organic Matter',
+                'Fertility Level', 'Salinity', 'Crop Type'
             ]
 
             # Create a dictionary for user inputs
             inputs = {}
 
             for feature in all_features:
-                inputs[feature] = st.number_input(f"Enter {feature} value", value=0.0)  # Default value
+                if feature == 'Crop Type':  # Handling categorical feature for crop type
+                    inputs[feature] = st.selectbox(f"Select {feature}", options=['1', '2'])  # Crop type 1: Wheat, 2: Rice
+                else:
+                    inputs[feature] = st.number_input(f"Enter {feature} value", value=0.0)  # Default value
 
             # Prepare the input data for prediction
             input_data = np.array([list(inputs.values())])
