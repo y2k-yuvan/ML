@@ -97,11 +97,14 @@ def main():
                     st.write(f"**RMSE:** {rmse}")
                     st.write(f"**R² Score:** {r2}")
 
-            # User input for prediction
+            # User input for prediction (request exactly 8 inputs)
             st.subheader("Enter values for prediction")
 
-            # Define all features used in the model (e.g., weather, soil, etc.)
-            all_features = ['Temperature', 'Rainfall', 'Soil Quality', 'Humidity', 'Region', 'Year']  # Example
+            # List of 8 features expected by the model
+            all_features = [
+                'Temperature', 'Rainfall', 'Soil Quality', 'Humidity', 
+                'Region', 'Year', 'Crop Type', 'Fertilizer Usage'
+            ]
 
             # Create a dictionary for user inputs
             inputs = {}
