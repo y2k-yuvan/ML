@@ -45,9 +45,15 @@ def main():
             combined_data = pd.merge(soil_data, weather_data, on=['region', 'year'])
             combined_data = pd.merge(combined_data, yield_data, on=['region', 'year'])
 
-            imputer = KNNImputer(n_neighbors=5)
-            clean_data = imputer.fit_transform(combined_data.select_dtypes(include=[np.number]))
+            # Select only the columns that are required (8 features)
+            feature_columns = ['temperature', 'rainfall', 'soil_quality', 'humidity', 'region', 'year', 'crop_type', 'fertilizer_usage']
+            combined_data = combined_data[feature_columns]
 
+            # Impute missing values
+            imputer = KNNImputer(n_neighbors=5)
+            clean_data = imputer.fit_transform(combined_data)
+
+            # Initialize MinMaxScaler and fit it only on the 8 features
             scaler = MinMaxScaler()
             normalized_data = scaler.fit_transform(clean_data)
 
