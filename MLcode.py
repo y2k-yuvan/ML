@@ -115,14 +115,11 @@ def main():
             # Prepare the input data for prediction
             input_data = np.array([list(inputs.values())])
 
-            # Ensure the input data has the correct shape (only 7 features, drop the last one)
-            input_data_7_features = input_data[:, :-1]  # Slice to use the first 7 features, assuming the 8th is the target
-
             # Scale the input data (since the model expects normalized input)
-            input_data_scaled = scaler.transform(input_data_7_features)
+            input_data_scaled = scaler.transform(input_data)
 
             # Ensure input data is in the correct shape (similar to training sequence)
-            input_data_sequence = np.expand_dims(input_data_scaled, axis=1)  # Expanding to match the sequence input (1, sequence_length, 7)
+            input_data_sequence = np.expand_dims(input_data_scaled, axis=1)  # Expanding to match the sequence input (1, sequence_length, 8)
 
             # Predict crop yield when the button is clicked
             if st.button("Predict Crop Yield"):
