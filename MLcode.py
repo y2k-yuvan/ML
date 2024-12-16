@@ -1,13 +1,13 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import MinMaxScaler
 from sklearn.impute import KNNImputer
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, r2_score
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv1D, MaxPooling1D, LSTM, Dropout, Dense
 from tensorflow.keras.callbacks import EarlyStopping
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, r2_score
 
 def main():
     st.title("Crop Yield Prediction with CNN-LSTM")
@@ -34,40 +34,40 @@ def main():
             st.write("### Yield Data Sample")
             st.dataframe(yield_data.head())
 
-            # Combine the datasets on 'region' and 'year'
+            # Data Preprocessing
+            st.write("### Combining and Preprocessing Data")
             combined_data = pd.merge(soil_data, weather_data, on=['region', 'year'])
             combined_data = pd.merge(combined_data, yield_data, on=['region', 'year'])
 
-            # Selecting only the features relevant to the prediction (7 features)
-            features = ['temperature', 'humidity', 'ph_level', 'moisture_content', 
-                        'organic_matter', 'fertility_level', 'salinity']
-
-            # Imputation for missing values
+            # Handle missing data
             imputer = KNNImputer(n_neighbors=5)
-            clean_data = imputer.fit_transform(combined_data[features])
+            clean_data = imputer.fit_transform(combined_data.select_dtypes(include=[np.number]))
 
-            # Normalizing only the selected features
+            # Normalize the data
             scaler = MinMaxScaler()
             normalized_data = scaler.fit_transform(clean_data)
 
-            # Model Setup
-            sequence_length = 1  # Keeping sequence length as 1 for simplicity
+            st.write("Data successfully preprocessed!")
+
+            # Sequence Creation (keep 6 features)
+            sequence_length = st.sidebar.slider("Sequence Length", 1, 10, value=2)
             sequences = []
             targets = []
 
             for i in range(len(normalized_data) - sequence_length):
-                sequences.append(normalized_data[i:i + sequence_length, :-1])  # Features (7 features excluding the yield)
-                targets.append(normalized_data[i + sequence_length, -1])  # Yield (target)
+                sequences.append(normalized_data[i:i + sequence_length, :-1])  # Features (6 features)
+                targets.append(normalized_data[i + sequence_length, -1])  # Target (Crop Yield)
+            
             sequences = np.array(sequences)
             targets = np.array(targets)
 
-            # Model Definition
+            # Model Definition - Working with 6 features
             model = Sequential()
             model.add(Conv1D(filters=64, kernel_size=2, activation='relu', input_shape=(sequence_length, sequences.shape[2])))
             model.add(MaxPooling1D(pool_size=1))
-            model.add(LSTM(50, return_sequences=False))
+            model.add(LSTM(50, return_sequences=False))  # Directly using LSTM without Flatten
             model.add(Dropout(0.2))
-            model.add(Dense(1, activation='linear'))  # Output layer for predicting yield
+            model.add(Dense(1, activation='linear'))
             model.compile(optimizer='adam', loss='mse', metrics=['mae'])
 
             # Train-Test Split
@@ -81,34 +81,41 @@ def main():
                     # Evaluation
                     predictions = model.predict(X_val)
                     mse = mean_squared_error(y_val, predictions)
-                    rmse = np.sqrt(mse)
+                    rmse = np.sqrt(mse)  # Manually calculate RMSE
 
-                    r2 = r2_score(y_val, predictions)
+                    # Check for constant target values to avoid NaN R²
+                    if np.var(y_val) == 0:
+                        r2 = float('nan')
+                        st.warning("R² Score is undefined because the target values are constant.")
+                    else:
+                        r2 = r2_score(y_val, predictions)
 
                     st.success("Model Training Complete!")
                     st.write(f"**RMSE:** {rmse}")
                     st.write(f"**R² Score:** {r2}")
 
-            # User input for prediction
-            st.sidebar.header("Enter Prediction Input")
-            temp = st.sidebar.number_input("Temperature (°C)", value=28.4)
-            humidity = st.sidebar.number_input("Humidity (%)", value=75)
-            ph = st.sidebar.number_input("pH Level", value=6.8)
-            moisture = st.sidebar.number_input("Moisture Content (%)", value=22)
-            organic_matter = st.sidebar.number_input("Organic Matter (%)", value=3.0)
-            fertility = st.sidebar.number_input("Fertility Level (1-10)", value=7)
-            salinity = st.sidebar.number_input("Salinity (%)", value=0.2)
+            # Prediction Input (takes 6 features)
+            st.write("### Predict Crop Yield")
+            region = st.number_input("Region", min_value=1, max_value=3, value=1)
+            year = st.number_input("Year", min_value=2023, max_value=2024, value=2023)
+            soil_type = st.selectbox("Soil Type", ["Silty", "Clayey", "Loamy", "Peaty"])
+            ph_level = st.number_input("pH Level", value=6.5)
+            moisture_content = st.number_input("Moisture Content", value=22)
+            organic_matter = st.number_input("Organic Matter", value=2.5)
+            fertility_level = st.number_input("Fertility Level", value=8)
 
-            # Prepare user input for prediction
-            input_data = np.array([[temp, humidity, ph, moisture, organic_matter, fertility, salinity]])
-            input_data = scaler.transform(input_data)  # Normalize the user input
+            if st.button("Predict"):
+                # Map categorical variables (e.g., soil_type) to numerical values
+                soil_type_map = {"Silty": 1, "Clayey": 2, "Loamy": 3, "Peaty": 4}
+                soil_type_num = soil_type_map.get(soil_type, 1)
 
-            # Reshape input for prediction
-            input_data = input_data.reshape((1, 1, 7))  # 1 sample, 1 timestep, 7 features (excluding crop type)
+                # Prepare input features (6 features)
+                input_features = np.array([[region, year, soil_type_num, ph_level, moisture_content, organic_matter, fertility_level]])
+                input_features = scaler.transform(input_features)  # Normalize input
 
-            if st.sidebar.button("Predict Yield"):
-                prediction = model.predict(input_data)
-                st.write(f"Predicted Crop Yield: {prediction[0][0]:.2f}")
+                # Predict using the trained model
+                prediction = model.predict(input_features)
+                st.write(f"Predicted Crop Yield: {prediction[0][0]:.2f} kg/hectare")
 
         except Exception as e:
             st.error(f"An error occurred during processing: {e}")
