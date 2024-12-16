@@ -34,14 +34,19 @@ def main():
             st.write("### Yield Data Sample")
             st.dataframe(yield_data.head())
 
-            # Combine the datasets
+            # Combine the datasets on 'region' and 'year'
             combined_data = pd.merge(soil_data, weather_data, on=['region', 'year'])
             combined_data = pd.merge(combined_data, yield_data, on=['region', 'year'])
 
-            # Preprocessing
-            imputer = KNNImputer(n_neighbors=5)
-            clean_data = imputer.fit_transform(combined_data.select_dtypes(include=[np.number]))
+            # Selecting only the features relevant to the prediction (7 features)
+            features = ['temperature', 'humidity', 'ph_level', 'moisture_content', 
+                        'organic_matter', 'fertility_level', 'salinity']
 
+            # Imputation for missing values
+            imputer = KNNImputer(n_neighbors=5)
+            clean_data = imputer.fit_transform(combined_data[features])
+
+            # Normalizing only the selected features
             scaler = MinMaxScaler()
             normalized_data = scaler.fit_transform(clean_data)
 
@@ -110,3 +115,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
